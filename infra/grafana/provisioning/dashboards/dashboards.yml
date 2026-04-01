@@ -1,0 +1,16 @@
+# =============================================================================
+# Grafana Dashboard Provisioning — SVT System
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: "SVT Dashboards"
+    orgId: 1
+    folder: "SVT System"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

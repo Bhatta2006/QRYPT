@@ -1,0 +1,93 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "Scan Rate (req/s)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(svt_scans_total[5m])",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "title": "Scan Verify Latency (P50/P95/P99)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(scan_verify_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(scan_verify_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(scan_verify_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "title": "Tokens Generated / Hour",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "increase(svt_tokens_generated_total[1h])"
+        }
+      ]
+    },
+    {
+      "title": "Anomalies Detected / Hour",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+      "targets": [
+        {
+          "expr": "increase(svt_anomalies_total[1h])"
+        }
+      ]
+    },
+    {
+      "title": "Revocations / Hour",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "increase(svt_revocations_total[1h])"
+        }
+      ]
+    },
+    {
+      "title": "Error Rate (%)",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(svt_scans_total{result='DENY'}[5m]) / rate(svt_scans_total[5m]) * 100"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["svt"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "SVT System — Operations",
+  "uid": "svt-operations"
+}

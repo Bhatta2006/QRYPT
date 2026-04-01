@@ -1,0 +1,185 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.0, pytest-8.2.0, pluggy-1.6.0
+rootdir: E:\NewGen - QR\svt-system\backend
+plugins: anyio-4.12.1, asyncio-0.23.6, cov-5.0.0
+asyncio: mode=strict
+collected 43 items
+
+tests\unit\test_crypto.py ................                               [ 37%]
+tests\unit\test_rotation.py ..                                           [ 41%]
+tests\unit\test_scan.py FFF.                                             [ 51%]
+tests\unit\test_security_jwt.py ..                                       [ 55%]
+tests\unit\test_stage4_5_compliance.py .................                 [ 95%]
+tests\unit\test_tokens.py F.                                             [100%]
+
+================================== FAILURES ===================================
+_________________________ test_verify_svt_token_allow _________________________
+
+mock_scanner = <ScannerDevice(id=c22abd93-2ff9-4c99-9db3-a92da532303d, name=Test Scanner 1)>
+
+    @pytest.mark.asyncio
+    async def test_verify_svt_token_allow(mock_scanner):
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_redis = AsyncMock(spec=Redis)
+    
+        pub_k, enc_priv_k = await generate_keypair()
+        priv_k = await get_private_key(enc_priv_k)
+    
+        issuer_id = uuid.uuid4()
+        svt_raw = await build_valid_svt_raw(issuer_id, 1, "https://secure.example.com", priv_k, pub_k)
+    
+        mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k)
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_key
+        mock_db.execute.return_value = mock_result
+        async def async_false(*a, **kw): return False
+        mock_redis.exists = async_false  # Not revoked
+        mock_redis.xadd = AsyncMock()
+    
+        req = ScanVerifyRequest(svt_raw=svt_raw)
+        res = await verify_svt_token(mock_db, mock_redis, req, mock_scanner, "127.0.0.1", "curl/7.68.0")
+    
+>       assert res.result == "ALLOW"
+E       AssertionError: assert 'CANNOT_VERIFY' == 'ALLOW'
+E         
+E         - ALLOW
+E         + CANNOT_VERIFY
+
+tests\unit\test_scan.py:92: AssertionError
+________________________ test_verify_svt_token_expired ________________________
+
+mock_scanner = <ScannerDevice(id=b8cdbdaa-6257-4fd5-adb9-4c81c3152d60, name=Test Scanner 1)>
+
+    @pytest.mark.asyncio
+    async def test_verify_svt_token_expired(mock_scanner):
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_redis = AsyncMock(spec=Redis)
+    
+        pub_k, enc_priv_k = await generate_keypair()
+        priv_k = await get_private_key(enc_priv_k)
+    
+        issuer_id = uuid.uuid4()
+        svt_raw = await build_valid_svt_raw(issuer_id, 1, "https://expired.example.com", priv_k, pub_k, expired=True)
+    
+        mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k)
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_key
+        mock_db.execute.return_value = mock_result
+        async def async_false(*a, **kw): return False
+        mock_redis.exists = async_false
+        mock_redis.xadd = AsyncMock()
+    
+        req = ScanVerifyRequest(svt_raw=svt_raw)
+        res = await verify_svt_token(mock_db, mock_redis, req, mock_scanner, "127.0.0.1", "curl")
+    
+>       assert res.result == "WARN"
+E       AssertionError: assert 'CANNOT_VERIFY' == 'WARN'
+E         
+E         - WARN
+E         + CANNOT_VERIFY
+
+tests\unit\test_scan.py:121: AssertionError
+________________________ test_verify_svt_token_revoked ________________________
+
+mock_scanner = <ScannerDevice(id=e80fb1a2-40ab-4d7e-80e2-c98efd624b1a, name=Test Scanner 1)>
+
+    @pytest.mark.asyncio
+    async def test_verify_svt_token_revoked(mock_scanner):
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_redis = AsyncMock(spec=Redis)
+    
+        pub_k, enc_priv_k = await generate_keypair()
+        priv_k = await get_private_key(enc_priv_k)
+    
+        issuer_id = uuid.uuid4()
+        svt_raw = await build_valid_svt_raw(issuer_id, 1, "https://x.com", priv_k, pub_k)
+    
+        mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k)
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_key
+        mock_db.execute.return_value = mock_result
+    
+        async def async_true(*a, **kw): return True
+        mock_redis.exists = async_true  # Mock token as Revoked
+        mock_redis.xadd = AsyncMock()
+    
+        req = ScanVerifyRequest(svt_raw=svt_raw)
+        res = await verify_svt_token(mock_db, mock_redis, req, mock_scanner, "10.0.0.1", "safari")
+    
+>       assert res.result == "DENY"
+E       AssertionError: assert 'CANNOT_VERIFY' == 'DENY'
+E         
+E         - DENY
+E         + CANNOT_VERIFY
+
+tests\unit\test_scan.py:148: AssertionError
+_______________________ test_generate_svt_token_success _______________________
+
+    @pytest.mark.asyncio
+    async def test_generate_svt_token_success():
+        """Verify SVT token builds correct claim envelopes and QR encoded images."""
+        mock_db = AsyncMock(spec=AsyncSession)
+    
+        # Needs a real valid Private Key mapping securely mocked
+        public_key, encrypted_private_key = await generate_keypair()
+    
+        issuer_id = uuid.uuid4()
+    
+        # Mocking active IssuerKey retrieval from exact SQL query chaining layout
+        mock_scalar = MagicMock(return_value=IssuerKey(
+            issuer_id=issuer_id,
+            version=1,
+            public_key=public_key,
+            encrypted_private_key=encrypted_private_key
+        ))
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = mock_scalar
+        mock_db.execute.return_value = mock_result
+    
+        request = TokenCreateRequest(payload_url="https://secure.example.com/pay/123", expires_in_hours=24)
+        response = await generate_svt_token(mock_db, issuer_id, request)
+    
+        assert response.status == "ACTIVE"
+        assert response.trace_id is not None
+        assert response.expires_at is not None
+        assert response.qr_code_base64.startswith("iVBORw0KGgo")  # Standard Magic Bytes PNG prefix in base64
+        assert response.svt_raw is not None
+    
+        # Validate DB addition
+        mock_db.add.assert_called_once()
+        token_record = mock_db.add.call_args[0][0]
+        assert token_record.trace_id == response.trace_id
+        assert token_record.payload_url == "https://secure.example.com/pay/123"
+    
+        # Decode the SVT Raw to ensure standard compliance
+        cbor_encoded_bytes = base64.urlsafe_b64decode(response.svt_raw + "==")
+        decoded_envelope = cbor2.loads(cbor_encoded_bytes)
+>       assert "p" in decoded_envelope
+E       AssertionError: assert 'p' in {'d': b'\xa5enonceX \x9f\xa3V\xdb7\xcbN\xee{\xd8\xb4Y\x85bi\x98\xd3K\xe2b\x04\xab\xfb\xa1\x9e\x92\xbf\x1d\x1a\xc7\xfc\...2aK05ZAEGbhEbVpu9Sb4UQ-8-nezS8S6Xs7AaK2fN5eqPXcRBA', 'trace_id': 'HxxcJGX6-Xss7K8c1jqlbuf9K9J_enIqTJl57BFQGpM', 'v': 1}
+
+tests\unit\test_tokens.py:62: AssertionError
+============================== warnings summary ===============================
+C:\Users\RAMAKRISHNA\AppData\Local\Programs\Python\Python310\lib\site-packages\starlette\formparsers.py:12
+  C:\Users\RAMAKRISHNA\AppData\Local\Programs\Python\Python310\lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+app\models\scan_event.py:17
+  E:\NewGen - QR\svt-system\backend\app\models\scan_event.py:17: SAWarning: Can't validate argument 'timescaledb_hypertable'; can't locate any SQLAlchemy dialect named 'timescaledb'
+    class ScanEvent(Base):
+
+tests/unit/test_crypto.py: 7 warnings
+tests/unit/test_rotation.py: 2 warnings
+tests/unit/test_scan.py: 4 warnings
+tests/unit/test_security_jwt.py: 2 warnings
+tests/unit/test_stage4_5_compliance.py: 15 warnings
+tests/unit/test_tokens.py: 2 warnings
+  C:\Users\RAMAKRISHNA\AppData\Local\Programs\Python\Python310\lib\site-packages\pytest_asyncio\plugin.py:894: DeprecationWarning: There is no current event loop
+    _loop = asyncio.get_event_loop()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/unit/test_scan.py::test_verify_svt_token_allow - AssertionError:...
+FAILED tests/unit/test_scan.py::test_verify_svt_token_expired - AssertionErro...
+FAILED tests/unit/test_scan.py::test_verify_svt_token_revoked - AssertionErro...
+FAILED tests/unit/test_tokens.py::test_generate_svt_token_success - Assertion...
+================== 4 failed, 39 passed, 34 warnings in 1.87s ==================
