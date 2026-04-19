@@ -1,7 +1,4 @@
-import os
-import json
 import pytest
-import asyncio
 from datetime import datetime, timedelta
 import fakeredis.aioredis
 from typing import AsyncGenerator
@@ -224,7 +221,7 @@ async def test_webhook_retry_failure(monkeypatch):
 
     # We mock asyncio.sleep so the test runs fast
     with patch("httpx.AsyncClient", new=lambda **kwargs: MockAsyncClient()):
-        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("asyncio.sleep", new_callable=AsyncMock) as _mock_sleep:
             with patch.object(webhook_service.logger, "error") as mock_logger:
                 await webhook_service.alert("test-trace", "test-trigger", 1.0)
                 

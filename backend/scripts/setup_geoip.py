@@ -1,6 +1,5 @@
 import os
 import urllib.request
-import tarfile
 
 def download_geoip_test_db():
     url = "https://raw.githubusercontent.com/maxmind/MaxMind-DB/main/test-data/GeoIP2-City-Test.mmdb"

@@ -1,5 +1,4 @@
 import json
-import sys
 from app.main import app
 
 def main():

@@ -14,7 +14,7 @@ function useRevocationStream() {
   const queryClient = useQueryClient();
   
   useEffect(() => {
-    let ctrl = new AbortController();
+    const ctrl = new AbortController();
     let lastEventId = '';
     let retryDelay = 1000;
     
@@ -41,13 +41,13 @@ function useRevocationStream() {
             try {
               const data = JSON.parse(msg.data);
               // Optimistically update Tanstack query cache
-              queryClient.setQueryData(['tokens'], (oldData: any) => {
+              queryClient.setQueryData(['tokens'], (oldData: { pages: { items: { trace_id: string; status: string }[] }[] } | undefined) => {
                 if (!oldData) return oldData;
                 return {
                   ...oldData,
-                  pages: oldData.pages.map((page: any) => ({
+                  pages: oldData.pages.map((page: { items: { trace_id: string; status: string }[] }) => ({
                     ...page,
-                    items: page.items.map((token: any) => 
+                    items: page.items.map((token: { trace_id: string; status: string }) => 
                       token.trace_id === data.trace_id ? { ...token, status: 'BLOCKED' } : token
                     )
                   }))
@@ -62,7 +62,9 @@ function useRevocationStream() {
                 });
               }
 
-            } catch (e) {}
+            } catch (e) {
+              // ignore error
+            }
           }
         },
         onclose() {
@@ -82,15 +84,15 @@ function useRevocationStream() {
     connect();
     
     // E2E Test Mock Override
-    const e2eHandler = (e: any) => {
-      const data = e.detail;
-      queryClient.setQueryData(['tokens'], (oldData: any) => {
+    const e2eHandler = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      queryClient.setQueryData(['tokens'], (oldData: { pages: { items: { trace_id: string; status: string }[] }[] } | undefined) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
-          pages: oldData.pages.map((page: any) => ({
+          pages: oldData.pages.map((page: { items: { trace_id: string; status: string }[] }) => ({
             ...page,
-            items: page.items.map((token: any) => 
+            items: page.items.map((token: { trace_id: string; status: string }) => 
               token.trace_id === data.trace_id ? { ...token, status: 'BLOCKED' } : token
             )
           }))

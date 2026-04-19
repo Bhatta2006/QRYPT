@@ -1,5 +1,3 @@
-import asyncio
-import json
 import uuid
 import pytest
 import pytest_asyncio
@@ -17,7 +15,7 @@ from app.db.base import Base
 from app.models.token import SVTToken
 from app.models.revocation_event import RevocationEvent
 from app.api.v1.events import sse_stream
-from app.api.v1.tokens import revoke_token, unblock_token, RevocationRequest
+from app.api.v1.tokens import revoke_token, RevocationRequest
 from app.core.security import UserContext
 from app.services import revocation_service
 from app.services.scan_service import verify_svt_token

@@ -173,7 +173,6 @@ async def _verify_inner(
     # 7. Fetch public key — with Redis caching (Task 9)
     # We will try fetching the latest active key from DB to get the version,
     # or rely on a known cache. The blueprint specifies pubkey:{issuer_id}:{version}
-    from sqlalchemy import func
     key_result = await db.execute(
         select(IssuerKey)
         .where(IssuerKey.issuer_id == issuer_id)

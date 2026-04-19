@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: pip install truffleHog3 && trufflehog3 --only-verified .
+      - run: pip install truffleHog3 && trufflehog3 --config .trufflehog3.yml --only-verified .
 
   e2e:
     needs: [build]

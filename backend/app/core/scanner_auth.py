@@ -9,8 +9,7 @@ import uuid
 import hashlib
 from datetime import datetime, timezone
 
-from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import APIKeyHeader
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
@@ -39,7 +38,7 @@ async def get_current_scanner(
 
     # 1. Validate timestamp
     try:
-        timestamp = float(timestamp_str)
+        timestamp = float(timestamp_str or "0")
         device_id = uuid.UUID(device_id_str)
     except ValueError:
         raise HTTPException(
@@ -94,11 +93,11 @@ async def get_current_scanner(
     # 3. Compute expected signature
     raw_body_bytes = await request.body()
     
-    msg = device_id_str.encode("utf-8") + timestamp_str.encode("utf-8") + raw_body_bytes
+    msg = (device_id_str or "").encode("utf-8") + (timestamp_str or "0").encode("utf-8") + raw_body_bytes
     expected_hmac = hmac.new(hmac_secret, msg, digestmod=hashlib.sha256).hexdigest()
 
     # 4. Timing-safe compare
-    if not hmac.compare_digest(expected_hmac, provided_signature):
+    if not hmac.compare_digest(expected_hmac.encode("utf-8"), (provided_signature or "").encode("utf-8")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="HMAC signature verification failed",

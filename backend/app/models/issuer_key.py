@@ -7,6 +7,9 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.user import User
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base

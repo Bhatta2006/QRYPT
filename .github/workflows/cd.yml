@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy-staging:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.GKE_CLUSTER != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
           python infra/scripts/smoke_test.py --url $BACKEND_URL
 
   deploy-prod:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && vars.GKE_CLUSTER != ''
     runs-on: ubuntu-latest
     environment: prod
     steps:

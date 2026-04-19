@@ -9,6 +9,9 @@ from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.token import SVTToken
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base

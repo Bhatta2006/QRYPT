@@ -1,16 +1,15 @@
+# ruff: noqa: E402
 # =============================================================================
 # SVT System — Crypto and Security Unit Tests
 # =============================================================================
 
 from __future__ import annotations
 
-import copy
 import os
 import uuid
 import pytest
 
 from app.core.crypto import (
-    CryptoError,
     _base64url_decode,
     _base64url_encode,
     canonical_encode,
@@ -21,11 +20,9 @@ from app.core.crypto import (
     verify_payload,
 )
 
-from app.core.kms.interface import KMSClient
 from app.core.kms.mock_kms import MockKMSClient
 import app.core.kms.provider as kms_provider
 
-from fastapi import Request
 
 @pytest.fixture(autouse=True)
 def setup_mock_kms():

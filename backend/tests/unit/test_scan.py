@@ -7,11 +7,10 @@
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import cbor2
@@ -83,8 +82,10 @@ async def test_verify_svt_token_allow(mock_scanner):
     mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k)
 
     call_count = [0]
-    mock_token_result = MagicMock(); mock_token_result.scalar_one_or_none.return_value = mock_token
-    mock_key_result = MagicMock(); mock_key_result.scalar_one_or_none.return_value = mock_key
+    mock_token_result = MagicMock()
+    mock_token_result.scalar_one_or_none.return_value = mock_token
+    mock_key_result = MagicMock()
+    mock_key_result.scalar_one_or_none.return_value = mock_key
 
     async def execute_side_effect(query):
         call_count[0] += 1
@@ -121,8 +122,10 @@ async def test_verify_svt_token_expired(mock_scanner):
     mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k)
 
     call_count = [0]
-    mock_token_result = MagicMock(); mock_token_result.scalar_one_or_none.return_value = mock_token
-    mock_key_result = MagicMock(); mock_key_result.scalar_one_or_none.return_value = mock_key
+    mock_token_result = MagicMock()
+    mock_token_result.scalar_one_or_none.return_value = mock_token
+    mock_key_result = MagicMock()
+    mock_key_result.scalar_one_or_none.return_value = mock_key
 
     async def execute_side_effect(query):
         call_count[0] += 1

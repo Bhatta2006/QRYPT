@@ -3,10 +3,9 @@
 # =============================================================================
 
 import uuid
-from datetime import datetime, timedelta, timezone
 
 import pytest
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 
 from app.core.security import create_access_token, get_current_user
 from app.core.security.device import generate_device_fingerprint

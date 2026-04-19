@@ -32,7 +32,10 @@ async def test_flow():
         svt_raw = svt_data["svt_raw"]
         
         print("5. Verifying SVT scan...")
-        import time, json, hashlib, hmac
+        import time
+        import json
+        import hashlib
+        import hmac
         timestamp = str(time.time())
         device_id = scanner["device_id"]
         hmac_secret_b64 = scanner["hmac_secret"]

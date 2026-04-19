@@ -19,7 +19,7 @@ const AlertsFeed = () => {
 
   return (
     <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
-      {data.items.map((alert: any, i: number) => (
+      {data.items.map((alert: { timestamp: number; trace_id: string; trigger: string; severity: number }, i: number) => (
         <div key={i} className="flex flex-col border p-3 rounded bg-slate-50 text-sm shadow-sm gap-2">
           <div className="flex justify-between items-center text-slate-500 text-xs">
             <span>{new Date(alert.timestamp).toLocaleString()}</span>
@@ -47,12 +47,12 @@ const Heatmap = ({ traceId }: { traceId: string }) => {
 
   // Render chart
   const chartData = {
-    labels: data.items.map((_: any, i: number) => i),
+    labels: data.items.map((_: unknown, i: number) => i),
     datasets: [
       {
         label: 'Scans',
-        data: data.items.map((d: any) => d.count),
-        backgroundColor: data.items.map((d: any) => {
+        data: data.items.map((d: { count: number }) => d.count),
+        backgroundColor: data.items.map((d: { count: number }) => {
           if (d.count < 10) return 'rgba(34, 197, 94, 0.8)'; // green
           if (d.count <= 50) return 'rgba(245, 158, 11, 0.8)'; // amber
           return 'rgba(220, 38, 38, 0.8)'; // red
@@ -79,7 +79,7 @@ const Admin = () => {
 
   const tokens = data?.items || [];
   
-  const filteredTokens = tokens.filter((t: any) => 
+  const filteredTokens = tokens.filter((t: { trace_id: string; status: string }) => 
     (filterStatus === 'ALL' || t.status === filterStatus) &&
     (searchPrefix === '' || t.trace_id.startsWith(searchPrefix))
   );
@@ -118,7 +118,7 @@ const Admin = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredTokens.map((t: any) => (
+                {filteredTokens.map((t: { trace_id: string; issuer_display_name: string; status: string; created_at: string }) => (
                   <tr key={t.trace_id} className="border-b hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedTraceId(t.trace_id)}>
                      <td className="px-4 py-2 font-mono">{t.trace_id.slice(-8)}</td>
                      <td className="px-4 py-2">{t.issuer_display_name}</td>

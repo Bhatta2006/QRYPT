@@ -59,7 +59,7 @@ registerRoute(
         const store = tx.objectStore('tokens');
         const getReq = store.get(traceId);
 
-        const record = await new Promise<any>((resolve, reject) => {
+        const record = await new Promise<{action: string, cache_updated_at: number} | undefined>((resolve, reject) => {
           getReq.onsuccess = () => resolve(getReq.result);
           getReq.onerror = () => reject(getReq.error);
         });
@@ -135,8 +135,8 @@ self.addEventListener('message', async (event) => {
         const keysWithTime: {key: string, time: number}[] = [];
         
         await new Promise<void>((resolve) => {
-          store.openCursor().onsuccess = (e: any) => {
-            const cursor = e.target.result;
+          store.openCursor().onsuccess = (e: Event) => {
+            const cursor = (e.target as IDBRequest).result;
             if (cursor) {
               keysWithTime.push({ key: cursor.key, time: cursor.value.cache_updated_at });
               cursor.continue();

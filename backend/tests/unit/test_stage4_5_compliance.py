@@ -11,7 +11,7 @@ import json
 import os
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import cbor2
@@ -24,7 +24,7 @@ from app.models.issuer_key import IssuerKey
 from app.models.scanner_device import ScannerDevice
 from app.schemas.scan import ScanVerifyRequest
 from app.schemas.token import TokenCreateRequest
-from app.services.scan_service import verify_svt_token, _base64url_no_padding, _base64url_decode
+from app.services.scan_service import verify_svt_token, _base64url_no_padding
 from app.services.token_service import generate_svt_token
 
 
@@ -92,7 +92,7 @@ async def test_token_wire_format_exactly():
     """
     mock_db = AsyncMock(spec=AsyncSession)
     pub_k, enc_priv_k = await generate_keypair()
-    priv_k = await get_private_key(enc_priv_k)
+    priv_k = await get_private_key(enc_priv_k)  # noqa: F841
     issuer_id = uuid.uuid4()
 
     mock_key = IssuerKey(issuer_id=issuer_id, version=1, public_key=pub_k, encrypted_private_key=enc_priv_k)
@@ -235,7 +235,7 @@ async def test_idempotency_redis_miss_generates_and_caches():
 
     user_ctx = UserContext(id=issuer_id, role="issuer", email="t@t.com")
     req = TokenCreateRequest(payload_url="https://idempotent.test", expires_in_hours=1)
-    result = await create_token(req, "new-idem-key", user_ctx, mock_db, mock_redis)
+    result = await create_token(req, "new-idem-key", user_ctx, mock_db, mock_redis)  # noqa: F841
 
     # Verify cache was set with 86400s TTL
     mock_redis.set.assert_called_once()

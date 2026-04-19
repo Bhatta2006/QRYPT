@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('SVT Frontend Flows', () => {
+
+  test.beforeEach(async ({ page }) => {
+    // Catch-all to prevent real network calls
+    await page.route('**/api/**', route => route.fulfill({status: 200, body: '{}'}));
+  });
   
   test('Login + generate token + verify QR download', async ({ page }) => {
     // Intercept backend auth

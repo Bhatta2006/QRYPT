@@ -37,6 +37,87 @@ const Scanner = () => {
   const isScanning = useRef(false);
   const lastScanTimestamp = useRef<{ [payload: string]: number }>({});
 
+  const scheduleDismiss = () => {
+    setTimeout(() => setResultOverlay(null), 3000);
+  };
+  
+  async function handleScan(rawQrString: string) {
+    try {
+      const buffer = fromBase64url(rawQrString);
+      const envelope = decode(buffer);
+
+      if (envelope.v !== 1) {
+        setResultOverlay({ type: 'DENY', traceId: '', issuerName: '', preview: '', reason: 'invalid_version' });
+        scheduleDismiss();
+        return;
+      }
+
+      const { d: D, trace_id, sig } = envelope;
+
+      if (!pubKeyCache.has(trace_id)) {
+        const keyData = await apiClient.getPublicKey(trace_id);
+        const pubKeyBytes = fromBase64url(keyData.public_key);
+        pubKeyCache.set(trace_id, pubKeyBytes);
+      }
+
+      const pubKey = pubKeyCache.get(trace_id)!;
+      
+      const canonicalCbor = (msg: Record<string, unknown>) => encode(msg);
+      // CRITICAL: Construct message canonically. CBOR-X serializes object properties in insertion order,
+      // but standard dictates shortest keys first. 'd' (length 1) comes before 'trace_id' (length 8).
+      const canonicalMsg = canonicalCbor({ d: D, trace_id }); 
+
+      const isValid = await ed.verify(sig, canonicalMsg, pubKey);
+
+      if (!isValid) {
+        setResultOverlay({ type: 'DENY', traceId: trace_id, issuerName: '', preview: '', reason: 'invalid_signature' });
+        scheduleDismiss();
+        return;
+      }
+
+      // Prepare Backend verification
+      const timestampMs = Date.now();
+      const body = { qr_payload: rawQrString, timestamp_ms: timestampMs };
+      const bodyStr = JSON.stringify(body);
+      const hmacSig = await signRequest(scannerApiKey, deviceId, timestampMs, bodyStr);
+
+      const res = await apiClient.verifyScan(deviceId, hmacSig, timestampMs, body);
+
+      setResultOverlay({
+        type: res.result as 'ALLOW' | 'DENY' | 'CANNOT_VERIFY',
+        traceId: trace_id,
+        issuerName: res.issuer_display_name || '',
+        preview: res.payload_preview || ''
+      });
+      scheduleDismiss();
+
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number, data?: { result?: string } } };
+      if (e.response && e.response.status === 401) return; // Ignore standard auth errors on UX? Or wait, scanner is not auth'd by JWT, it uses API key inside HMAC.
+      
+      const res = e.response?.data || {};
+      
+      if (res.result) {
+         setResultOverlay({
+           type: res.result || 'CANNOT_VERIFY',
+           traceId: res.trace_id || 'unknown',
+           issuerName: '',
+           preview: '',
+           reason: res.reason || 'network_error'
+         });
+      } else {
+         setResultOverlay({
+           type: 'CANNOT_VERIFY',
+           traceId: 'unknown',
+           issuerName: '',
+           preview: '',
+           reason: 'network_error'
+         });
+      }
+      scheduleDismiss();
+    }
+  }
+
   useEffect(() => {
     if (setupMode) return;
 
@@ -92,85 +173,9 @@ const Scanner = () => {
     };
   }, [setupMode]);
 
-  const handleScan = async (rawQrString: string) => {
-    try {
-      const buffer = fromBase64url(rawQrString);
-      const envelope = decode(buffer);
 
-      if (envelope.v !== 1) {
-        setResultOverlay({ type: 'DENY', traceId: '', issuerName: '', preview: '', reason: 'invalid_version' });
-        scheduleDismiss();
-        return;
-      }
 
-      const { d: D, trace_id, sig } = envelope;
 
-      if (!pubKeyCache.has(trace_id)) {
-        const keyData = await apiClient.getPublicKey(trace_id);
-        const pubKeyBytes = fromBase64url(keyData.public_key);
-        pubKeyCache.set(trace_id, pubKeyBytes);
-      }
-
-      const pubKey = pubKeyCache.get(trace_id)!;
-      
-      const canonicalCbor = (msg: any) => encode(msg);
-      // CRITICAL: Construct message canonically. CBOR-X serializes object properties in insertion order,
-      // but standard dictates shortest keys first. 'd' (length 1) comes before 'trace_id' (length 8).
-      const canonicalMsg = canonicalCbor({ d: D, trace_id }); 
-
-      const isValid = await ed.verify(sig, canonicalMsg, pubKey);
-
-      if (!isValid) {
-        setResultOverlay({ type: 'DENY', traceId: trace_id, issuerName: '', preview: '', reason: 'invalid_signature' });
-        scheduleDismiss();
-        return;
-      }
-
-      // Prepare Backend verification
-      const timestampMs = Date.now();
-      const body = { qr_payload: rawQrString, timestamp_ms: timestampMs };
-      const bodyStr = JSON.stringify(body);
-      const hmacSig = await signRequest(scannerApiKey, deviceId, timestampMs, bodyStr);
-
-      const res = await apiClient.verifyScan(deviceId, hmacSig, timestampMs, body);
-
-      setResultOverlay({
-        type: res.result as any,
-        traceId: trace_id,
-        issuerName: res.issuer_display_name || '',
-        preview: res.payload_preview || ''
-      });
-      scheduleDismiss();
-
-    } catch (e: any) {
-      if (e.response && e.response.status === 401) return; // Ignore standard auth errors on UX? Or wait, scanner is not auth'd by JWT, it uses API key inside HMAC.
-      
-      const res = e.response?.data || {};
-      
-      if (res.result) {
-         setResultOverlay({
-           type: res.result || 'CANNOT_VERIFY',
-           traceId: res.trace_id || 'unknown',
-           issuerName: '',
-           preview: '',
-           reason: res.reason || 'network_error'
-         });
-      } else {
-         setResultOverlay({
-           type: 'CANNOT_VERIFY',
-           traceId: 'unknown',
-           issuerName: '',
-           preview: '',
-           reason: 'network_error'
-         });
-      }
-      scheduleDismiss();
-    }
-  };
-
-  const scheduleDismiss = () => {
-    setTimeout(() => setResultOverlay(null), 3000);
-  };
 
   const handleSetup = (e: React.FormEvent) => {
     e.preventDefault();

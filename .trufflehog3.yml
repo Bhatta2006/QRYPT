@@ -1,0 +1,6 @@
+exclude:
+  - message: "Ignore test fixtures"
+    paths:
+      - "backend/tests/.*"
+      - "frontend/src/tests/.*"
+      - "backend/test_flow.py"

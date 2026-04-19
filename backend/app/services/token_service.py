@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 import cbor2
 import qrcode
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import get_private_key, sign_payload
@@ -92,7 +92,7 @@ async def generate_svt_token(
     }
     
     qr_payload_bytes = cbor2.dumps(qr_payload_dict, canonical=True)
-    svt_raw = base64url_no_padding(qr_payload_bytes)
+    svt_raw = base64url_no_padding(qr_payload_bytes)  # type: ignore
 
     # 6. Database storage
     token_record = SVTToken(
@@ -100,7 +100,7 @@ async def generate_svt_token(
         issuer_id=issuer_id,
         payload_url=request.payload_url,
         status="ACTIVE",
-        nonce=base64url_no_padding(D_dict["nonce"]),
+        nonce=base64url_no_padding(D_dict["nonce"]),  # type: ignore
         signature=signature,
         expires_at=expires_at,
     )

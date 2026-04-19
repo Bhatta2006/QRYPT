@@ -2,7 +2,6 @@
 # SVT System — Key Rotation Unit Tests
 # =============================================================================
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

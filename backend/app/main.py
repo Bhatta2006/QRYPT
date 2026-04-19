@@ -21,6 +21,8 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.metrics import REGISTRY
 from app.core.tracing import configure_tracing
+from prometheus_client import make_asgi_app
+from app.api.router import api_router
 
 logger = logging.getLogger("svt.main")
 settings = get_settings()
@@ -109,8 +111,6 @@ app.add_middleware(
 
 configure_tracing(app)
 
-from prometheus_client import make_asgi_app
-
 metrics_app = make_asgi_app(registry=REGISTRY)
 app.mount("/metrics", metrics_app)
 
@@ -118,8 +118,6 @@ app.mount("/metrics", metrics_app)
 # =============================================================================
 # Router Registration — Canonical API Router
 # =============================================================================
-
-from app.api.router import api_router
 
 app.include_router(api_router)
 
