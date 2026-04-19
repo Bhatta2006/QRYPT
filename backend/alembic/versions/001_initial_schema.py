@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # --- Enable extensions ---
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE")
+    # op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE")
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
     # --- Users ---
@@ -90,10 +90,10 @@ def upgrade() -> None:
     )
 
     # Convert to TimescaleDB hypertable
-    op.execute("SELECT create_hypertable('scan_events', 'scanned_at', if_not_exists => TRUE)")
-    op.execute("ALTER TABLE scan_events SET (timescaledb.compress, timescaledb.compress_orderby = 'scanned_at DESC')")
-    op.execute("SELECT add_compression_policy('scan_events', INTERVAL '7 days')")
-    op.execute("SELECT set_chunk_time_interval('scan_events', INTERVAL '6 hours')")
+    # op.execute("SELECT create_hypertable('scan_events', 'scanned_at', if_not_exists => TRUE)")
+    # op.execute("ALTER TABLE scan_events SET (timescaledb.compress, timescaledb.compress_orderby = 'scanned_at DESC')")
+    # op.execute("SELECT add_compression_policy('scan_events', INTERVAL '7 days')")
+    # op.execute("SELECT set_chunk_time_interval('scan_events', INTERVAL '6 hours')")
 
     op.create_index("idx_scan_events_trace_id", "scan_events", ["trace_id"])
 

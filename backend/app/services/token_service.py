@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import get_private_key, sign_payload
+from app.core.metrics import svt_tokens_generated_total
 from app.models.issuer_key import IssuerKey
 from app.models.token import SVTToken
 from app.schemas.token import TokenCreateRequest, TokenResponse
@@ -104,6 +105,7 @@ async def generate_svt_token(
         expires_at=expires_at,
     )
     db.add(token_record)
+    svt_tokens_generated_total.labels(issuer_id=str(issuer_id)).inc()
 
     # 7. Rendering QR code Image
     qr_data = f"svt://{svt_raw}"

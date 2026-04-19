@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: svt-system
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:16
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: svt-backend-secrets
+                      key: POSTGRES_PASSWORD
+                - name: POSTGRES_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: svt-backend-secrets
+                      key: POSTGRES_HOST
+                - name: BACKUP_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: svt-backend-secrets
+                      key: BACKUP_BUCKET
+                - name: PUSHGATEWAY_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: svt-backend-secrets
+                      key: PUSHGATEWAY_URL
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  pg_dump -h $POSTGRES_HOST -U svt_app svt | gzip | gsutil cp - gs://$BACKUP_BUCKET/postgres/$(date +%Y%m%d-%H%M%S).sql.gz
+                  EXIT_CODE=$?
+                  if [ $EXIT_CODE -ne 0 ]; then
+                    METRIC_VALUE=0
+                  else
+                    METRIC_VALUE=$(date +%s)
+                  fi
+                  curl -s -X POST $PUSHGATEWAY_URL/metrics/job/pg_backup \
+                    --data-binary "pg_backup_last_success_timestamp $METRIC_VALUE"
+                  exit $EXIT_CODE

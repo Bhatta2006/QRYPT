@@ -1,0 +1,283 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: svt-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  svt-operations.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "id": 1,
+          "title": "Scan Rate",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "rate(svt_scans_total[5m])",
+              "legendFormat": "{{result}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "P50 Latency",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, rate(scan_verify_duration_seconds_bucket[5m]))",
+              "legendFormat": "P50"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "P95 Latency",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(scan_verify_duration_seconds_bucket[5m]))",
+              "legendFormat": "P95"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "P99 Latency",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, rate(scan_verify_duration_seconds_bucket[5m]))",
+              "legendFormat": "P99"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Error Rate",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 0.01}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+          "targets": [
+            {
+              "expr": "rate(svt_scans_total{result=\"DENY\"}[5m]) / rate(svt_scans_total[5m])",
+              "legendFormat": "Error Rate"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Anomaly Rate by Rule",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+          "targets": [
+            {
+              "expr": "rate(svt_anomalies_total[5m])",
+              "legendFormat": "{{rule}}"
+            }
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 36,
+      "tags": ["svt", "operations"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "SVT Operations",
+      "uid": "svt-ops-01"
+    }
+  svt-business.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "id": 1,
+          "title": "Tokens Generated / Hour",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "increase(svt_tokens_generated_total[1h])",
+              "legendFormat": "Tokens Generated"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Revocations / Hour",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+          "targets": [
+            {
+              "expr": "increase(svt_revocations_total[1h])",
+              "legendFormat": "Revocations"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Approximate Active Tokens",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+          "targets": [
+            {
+              "expr": "svt_tokens_generated_total - svt_revocations_total",
+              "legendFormat": "Active Tokens (approx)"
+            }
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 36,
+      "tags": ["svt", "business"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "SVT Business",
+      "uid": "svt-biz-01"
+    }
+  svt-infra.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "id": 1,
+          "title": "DB Connection Pool Usage",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "pg_stat_activity_count",
+              "legendFormat": "{{state}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Redis Memory Usage",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 80}
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100",
+              "legendFormat": "Memory %"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Pod CPU Usage",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [
+            {
+              "expr": "rate(container_cpu_usage_seconds_total{namespace=\"svt-system\"}[5m])",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Pod Memory Usage",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {
+              "expr": "container_memory_working_set_bytes{namespace=\"svt-system\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 36,
+      "tags": ["svt", "infra"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "SVT Infra",
+      "uid": "svt-infra-01"
+    }

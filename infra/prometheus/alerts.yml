@@ -3,7 +3,7 @@
 # =============================================================================
 
 groups:
-  - name: svt_scan_alerts
+  - name: svt_alerts
     rules:
       - alert: ScanP99High
         expr: histogram_quantile(0.99, rate(scan_verify_duration_seconds_bucket[5m])) > 0.2
@@ -11,44 +11,34 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Scan verify P99 latency exceeds 200ms"
-          description: "P99 scan latency is {{ $value }}s (threshold: 0.2s)"
+          summary: "Scan P99 latency > 200ms"
+          description: "P99 = {{ $value | humanizeDuration }}"
 
       - alert: ErrorRateHigh
-        expr: >
-          rate(svt_scans_total{result="DENY"}[5m])
-          / rate(svt_scans_total[5m]) > 0.01
+        expr: rate(svt_scans_total{result="DENY"}[5m]) / rate(svt_scans_total[5m]) > 0.01
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "Scan DENY rate exceeds 1%"
-          description: "DENY rate is {{ $value | humanizePercentage }}"
+          summary: "Scan error rate > 1%"
 
-  - name: svt_anomaly_alerts
-    rules:
       - alert: AnomalySpike
-        expr: >
-          rate(svt_anomalies_total[5m])
-          > 3 * rate(svt_anomalies_total[1h])
-        for: 2m
+        expr: rate(svt_anomalies_total[5m]) > 3 * rate(svt_anomalies_total[1h])
+        for: 0m
         labels:
           severity: warning
         annotations:
-          summary: "Anomaly detection rate spike (3x baseline)"
-          description: "Current anomaly rate is {{ $value }}/s"
+          summary: "Anomaly rate 3x above baseline"
 
-  - name: svt_infra_alerts
-    rules:
       - alert: RedisMemoryHigh
         expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "Redis memory usage exceeds 80%"
-          description: "Redis memory at {{ $value | humanizePercentage }}"
+          summary: "Redis memory > 80%"
 
+      # extra — not in blueprint spec
       - alert: PostgresConnectionsHigh
         expr: pg_stat_activity_count > 80
         for: 5m
@@ -58,8 +48,9 @@ groups:
           summary: "PostgreSQL active connections exceeds 80"
           description: "Active connections: {{ $value }}"
 
+      # extra — not in blueprint spec
       - alert: PostgresBackupFailed
-        expr: time() - svt_backup_last_success_timestamp > 172800
+        expr: time() - pg_backup_last_success_timestamp > 172800
         for: 1h
         labels:
           severity: critical

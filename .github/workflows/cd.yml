@@ -1,0 +1,56 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: |
+          gcloud auth configure-docker ${{ vars.ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev
+          docker build -t ${{ vars.IMAGE_BASE }}:${{ github.sha }} backend/
+          docker push ${{ vars.IMAGE_BASE }}:${{ github.sha }}
+          docker tag ${{ vars.IMAGE_BASE }}:${{ github.sha }} ${{ vars.IMAGE_BASE }}:staging
+          docker push ${{ vars.IMAGE_BASE }}:staging
+      - run: |
+          gcloud container clusters get-credentials ${{ vars.GKE_CLUSTER }} --region ${{ vars.GKE_REGION }}
+          kubectl apply -k infra/k8s/overlays/staging
+          kubectl rollout status deployment/svt-backend -n svt-system --timeout=300s
+      - name: Smoke test
+        run: |
+          BACKEND_URL=https://staging.svt.internal
+          curl -f $BACKEND_URL/api/v1/health
+          python infra/scripts/smoke_test.py --url $BACKEND_URL
+
+  deploy-prod:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: |
+          gcloud container clusters get-credentials ${{ vars.GKE_CLUSTER }} --region ${{ vars.GKE_REGION }}
+          kubectl apply -k infra/k8s/overlays/prod
+          kubectl rollout status deployment/svt-backend -n svt-system --timeout=300s || \
+            (kubectl rollout undo deployment/svt-backend -n svt-system && exit 1)
+      - name: Smoke test prod
+        run: python infra/scripts/smoke_test.py --url https://svt.internal

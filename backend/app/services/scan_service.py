@@ -22,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import verify_payload
+from app.core.metrics import scan_verify_duration_seconds, svt_scans_total
 from app.models.issuer_key import IssuerKey
 from app.models.scanner_device import ScannerDevice
 from app.schemas.scan import ScanVerifyRequest, ScanVerifyResponse
@@ -84,6 +85,19 @@ async def verify_svt_token(
     Decode and verify the SVT QR payload against the blueprint wire format.
     Implements: cache fallback, GeoIP, device fingerprinting, stream telemetry.
     """
+    with scan_verify_duration_seconds.time():
+        return await _verify_inner(db, redis, request, scanner, client_ip, user_agent, device_id)
+
+
+async def _verify_inner(
+    db: AsyncSession,
+    redis: Redis,
+    request: ScanVerifyRequest,
+    scanner: ScannerDevice,
+    client_ip: str | None,
+    user_agent: str | None,
+    device_id: str | None = None,
+) -> ScanVerifyResponse:
     now = datetime.now(timezone.utc)
 
     # Strip svt:// prefix
@@ -96,15 +110,18 @@ async def verify_svt_token(
         qr_bytes = _base64url_decode(raw_payload)
         envelope = cbor2.loads(qr_bytes)
     except Exception:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="CANNOT_VERIFY", reason="Malformed SVT: base64/CBOR decode failed")
 
     # 2. Strict field validation (Task 12)
     required = {"v", "d", "trace_id", "sig"}
     if not isinstance(envelope, dict) or set(envelope.keys()) != required:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="CANNOT_VERIFY", reason="Invalid or unexpected SVT fields")
 
     # 3. Version check (Task 10)
     if envelope.get("v") != 1:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="DENY", reason=f"Unsupported SVT version: {envelope.get('v')}")
 
     D: bytes = envelope["d"]
@@ -112,11 +129,13 @@ async def verify_svt_token(
     sig: str = envelope["sig"]
 
     if not isinstance(D, bytes) or not isinstance(trace_id, str) or not isinstance(sig, str):
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="CANNOT_VERIFY", reason="Invalid field types in SVT")
 
     # 4. Verify trace_id deterministically
     computed_trace_id = _base64url_no_padding(hashlib.sha256(D).digest())
     if computed_trace_id != trace_id:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="DENY", reason="trace_id integrity check failed")
 
     # 5. Decode inner D dict
@@ -127,6 +146,7 @@ async def verify_svt_token(
         payload_url: str = D_dict["payload_url"]
         issuer_id = uuid.UUID(bytes=issuer_id_bytes)
     except Exception:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="CANNOT_VERIFY", reason="Malformed D payload")
 
     # 6. Cache fallback — check Redis first, then DB (Task 7)
@@ -146,6 +166,7 @@ async def verify_svt_token(
         await redis.set(cache_key, token_status, ex=60)
 
     if token_status == "REVOKED":
+        svt_scans_total.labels(result="DENY").inc()
         await _emit_telemetry(redis, trace_id, "DENY", scanner, client_ip, user_agent, device_id)
         return ScanVerifyResponse(result="DENY", reason="Token has been revoked by issuer")
 
@@ -161,6 +182,7 @@ async def verify_svt_token(
     )
     issuer_key = key_result.scalar_one_or_none()
     if not issuer_key:
+        svt_scans_total.labels(result="DENY").inc()
         return ScanVerifyResponse(result="DENY", reason="Issuer public key not found")
         
     pubkey_cache_key = f"pubkey:{issuer_id}:{issuer_key.version}"
@@ -175,16 +197,19 @@ async def verify_svt_token(
     # 8. Signature verification — sign({d: D_bytes, trace_id: str})
     is_valid = verify_payload({"d": D, "trace_id": trace_id}, sig, public_key_bytes)
     if not is_valid:
+        svt_scans_total.labels(result="DENY").inc()
         await _emit_telemetry(redis, trace_id, "DENY", scanner, client_ip, user_agent, device_id)
         return ScanVerifyResponse(result="DENY", reason="Cryptographic signature mismatch")
 
     # 9. Expiration check
     if expires_at_ms and expires_at_ms > 0:
         if int(now.timestamp() * 1000) > expires_at_ms:
+            svt_scans_total.labels(result="DENY").inc()
             await _emit_telemetry(redis, trace_id, "DENY", scanner, client_ip, user_agent, device_id)
             return ScanVerifyResponse(result="DENY", reason="Token is valid but expired")
 
     # 10. Success
+    svt_scans_total.labels(result="ALLOW").inc()
     await _emit_telemetry(redis, trace_id, "ALLOW", scanner, client_ip, user_agent, device_id)
     return ScanVerifyResponse(result="ALLOW", payload_url=payload_url)
 

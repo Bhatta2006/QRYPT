@@ -1,0 +1,57 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tokens Generated / Hour",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "increase(svt_tokens_generated_total[1h])",
+          "legendFormat": "Tokens Generated"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Revocations / Hour",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "increase(svt_revocations_total[1h])",
+          "legendFormat": "Revocations"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Approximate Active Tokens",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "svt_tokens_generated_total - svt_revocations_total",
+          "legendFormat": "Active Tokens (approx)"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "tags": ["svt", "business"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "SVT Business",
+  "uid": "svt-biz-01"
+}

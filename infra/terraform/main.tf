@@ -202,7 +202,7 @@ resource "google_storage_bucket" "svt_backups" {
 
   lifecycle_rule {
     condition {
-      age = 90
+      age = 30
     }
     action {
       type = "Delete"

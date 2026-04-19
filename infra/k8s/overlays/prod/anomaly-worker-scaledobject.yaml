@@ -1,0 +1,17 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: anomaly-worker-scaler
+  namespace: svt-system
+spec:
+  scaleTargetRef:
+    name: anomaly-worker
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+    - type: redis-streams
+      metadata:
+        address: REDIS_ADDRESS
+        stream: anomaly_events
+        consumerGroup: anomaly-workers
+        pendingEntriesCount: "1000"

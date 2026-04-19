@@ -23,8 +23,8 @@ class ScanEvent(Base):
             "result IN ('ALLOW', 'WARN', 'DENY', 'CANNOT_VERIFY')",
             name="ck_scan_events_result",
         ),
-        # Composite PK required for TimescaleDB hypertable
-        {"timescaledb_hypertable": {"time_column_name": "scanned_at"}},
+        # Note: TimescaleDB hypertable is configured via Alembic migration 001,
+        # not via ORM __table_args__. Composite PK (id, scanned_at) is required.
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

@@ -8,7 +8,8 @@ from typing import Annotated, Any
 
 import json
 
-from fastapi import APIRouter, Depends, Query, status, Header
+from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query, status, Header, HTTPException, Response
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,10 @@ from app.db.session import get_db
 from app.models.token import SVTToken
 from app.schemas.token import TokenCreateRequest, TokenDetailsResponse, TokenResponse
 from app.services.token_service import generate_svt_token
+from app.services import revocation_service
+
+class RevocationRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
 
@@ -69,3 +74,36 @@ async def list_tokens(
         .offset(offset)
     )
     return result.scalars().all()
+
+
+@router.post("/{trace_id}/revoke")
+async def revoke_token(
+    trace_id: str,
+    request: RevocationRequest,
+    current_user: UserContext = Depends(rbac(["issuer", "admin"])),
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """Revoke a specific SVT Token."""
+    if current_user.role == "issuer":
+        result = await db.execute(
+            select(SVTToken.issuer_id).where(SVTToken.trace_id == trace_id)
+        )
+        issuer_id = result.scalar_one_or_none()
+        if issuer_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+
+    rev_event = await revocation_service.revoke(trace_id, request.reason, current_user.id, db, redis)
+    return {"revocation_id": rev_event.id, "revoked_at": rev_event.created_at.isoformat()}
+
+
+@router.post("/admin/{trace_id}/unblock")
+async def unblock_token(
+    trace_id: str,
+    current_user: UserContext = Depends(rbac(["admin"])),
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """Unblock a revoked SVT Token."""
+    await revocation_service.unrevoke(trace_id, current_user.id, db, redis)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

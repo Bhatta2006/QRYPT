@@ -8,10 +8,17 @@
   "links": [],
   "panels": [
     {
-      "title": "Scan Rate (req/s)",
-      "type": "timeseries",
+      "id": 1,
+      "title": "Scan Rate",
+      "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
       "targets": [
         {
           "expr": "rate(svt_scans_total[5m])",
@@ -20,19 +27,56 @@
       ]
     },
     {
-      "title": "Scan Verify Latency (P50/P95/P99)",
-      "type": "timeseries",
+      "id": 2,
+      "title": "P50 Latency",
+      "type": "stat",
       "datasource": "Prometheus",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
       "targets": [
         {
           "expr": "histogram_quantile(0.50, rate(scan_verify_duration_seconds_bucket[5m]))",
           "legendFormat": "P50"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "P95 Latency",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
         },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "targets": [
         {
           "expr": "histogram_quantile(0.95, rate(scan_verify_duration_seconds_bucket[5m]))",
           "legendFormat": "P95"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "P99 Latency",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
         },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+      "targets": [
         {
           "expr": "histogram_quantile(0.99, rate(scan_verify_duration_seconds_bucket[5m]))",
           "legendFormat": "P99"
@@ -40,54 +84,49 @@
       ]
     },
     {
-      "title": "Tokens Generated / Hour",
-      "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
-      "targets": [
-        {
-          "expr": "increase(svt_tokens_generated_total[1h])"
-        }
-      ]
-    },
-    {
-      "title": "Anomalies Detected / Hour",
-      "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
-      "targets": [
-        {
-          "expr": "increase(svt_anomalies_total[1h])"
-        }
-      ]
-    },
-    {
-      "title": "Revocations / Hour",
-      "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
-      "targets": [
-        {
-          "expr": "increase(svt_revocations_total[1h])"
-        }
-      ]
-    },
-    {
-      "title": "Error Rate (%)",
+      "id": 5,
+      "title": "Error Rate",
       "type": "gauge",
       "datasource": "Prometheus",
-      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 0.01}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
       "targets": [
         {
-          "expr": "rate(svt_scans_total{result='DENY'}[5m]) / rate(svt_scans_total[5m]) * 100"
+          "expr": "rate(svt_scans_total{result=\"DENY\"}[5m]) / rate(svt_scans_total[5m])",
+          "legendFormat": "Error Rate"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Anomaly Rate by Rule",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "targets": [
+        {
+          "expr": "rate(svt_anomalies_total[5m])",
+          "legendFormat": "{{rule}}"
         }
       ]
     }
   ],
-  "schemaVersion": 39,
-  "tags": ["svt"],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "tags": ["svt", "operations"],
   "templating": {"list": []},
-  "time": {"from": "now-6h", "to": "now"},
-  "title": "SVT System — Operations",
-  "uid": "svt-operations"
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "SVT Operations",
+  "uid": "svt-ops-01"
 }

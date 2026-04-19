@@ -19,7 +19,7 @@ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'svt_app') THEN
         CREATE ROLE svt_app WITH
             LOGIN
-            PASSWORD 'CHANGE_ME_app_password'
+            PASSWORD 'local_app_db_123'
             NOSUPERUSER
             NOCREATEDB
             NOCREATEROLE;
