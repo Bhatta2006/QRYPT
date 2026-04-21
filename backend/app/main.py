@@ -50,8 +50,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
         await redis.ping()
         logger.info("Redis connection verified.")
     except Exception as exc:
-        logger.error("Redis not available at startup: %s", exc)
-        raise RuntimeError(f"Startup halted: Redis unavailable - {exc}")
+        logger.warning("Redis not available at startup; continuing without cache features: %s", exc)
 
     # Validate DB engine connectivity
     from app.db.session import engine
